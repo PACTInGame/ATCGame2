@@ -10,7 +10,7 @@ def simulate_aircraft_radio_transmissions(planes_at_airport, planes_in_airspace,
                 radio = f"Approach, requesting Tower frequency, {plane.callsign}."
 
         elif plane.state == 1:
-            if plane.controller == 0 and 2 < plane.progress < 5:
+            if plane.controller == 0 and 2 < plane.progress < 5: # TODO only if cleared for approach / welcomed
                 radio = f"Approach, {plane.callsign}, established, need the Tower frequency."
             elif plane.controller == 0 and plane.progress > 15:
                 plane.pilot_stress_level += 0.1
@@ -134,7 +134,7 @@ def plane_answers(atc_call, plane, info=""):
             radio = f"Expect ILS approach, {plane.callsign}."  # TODO add runway num
             plane.cleared_approach = True
     elif atc_call == 1 or atc_call == 8:
-        if (plane.state == 0 and plane.cleared_approach) or plane.state == 6:
+        if ((plane.state <= 1 and plane.cleared_approach) or plane.state == 6) and plane.controller != 1:
             radio = f"Contact Tower on {info}, {plane.callsign}."
 
     elif atc_call == 2:

@@ -69,9 +69,10 @@ class GameController:
             planes = self.airport.airspace.planes_about_to_enter_airspace + self.airport.airspace.planes_in_airspace + self.airport.planes_at_airport
             buttons = []
             x = 20
+            y = 20
             for plane in planes:
-                button = Button((60, 60, 100), x, 20, 100, 50, plane.callsign, 20)
-                x = x + 70
+                button = Button((60, 60, 100), x, y, 100, 50, plane.callsign, 20)
+                y = y + 70
                 buttons.append(button)
             self.UI.plane_buttons = buttons
             print(buttons)
