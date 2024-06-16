@@ -102,6 +102,10 @@ class GameController:
         keyboard.hook(self.handle_keyboard_events)
         while self.running:
             while self.state == 1:
+                if self.spawn_rate_planes + self.time_plane_spawned < time.perf_counter():
+                    self.time_plane_spawned = time.perf_counter()
+                    plane = self.create_airplane(0)
+                    self.airport.airspace.planes_about_to_enter_airspace.append(plane)
                 if self.fps_counter + 1 < time.perf_counter():
                     self.fps_counter = time.perf_counter()
 
@@ -114,3 +118,4 @@ class GameController:
                     GameLogic.simulate_aircraft_radio_transmissions(self.airport.planes_at_airport,
                                                                     self.airport.airspace.planes_in_airspace,
                                                                     self.airport.airspace.planes_about_to_enter_airspace)
+        keyboard.unhook(self.handle_keyboard_events)

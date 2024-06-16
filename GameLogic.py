@@ -85,37 +85,43 @@ def simulate_aircraft_radio_transmissions(planes_at_airport, planes_in_airspace,
 def atc_calls(call, plane, game, info=""):
     transmission = ""
     if call == 0:
-        transmission = f"{plane.callsign}, Approach, good day. Radar contact.\nExpect ILS approach."  # TODO add runway num
+        transmission = f"{plane.callsign}, Approach, good day. Radar contact. Expect ILS approach."  # TODO add runway num
     elif call == 1:
-        transmission = f"{plane.callsign}, Approach, intercept localizer, cleared ILS approach. Contact Tower on {info}." # TODO Anther contac tower for takeoff
+        info = "118.1"
+        transmission = f"{plane.callsign}, Approach, cleared ILS approach. Contact Tower on {info}." # TODO Anther contac tower for takeoff
     elif call == 2:
         transmission = f"{plane.callsign}, Tower, cleared to land."
     elif call == 3:
         transmission = f"{plane.callsign}, Tower, wind {game.airport.wind}."
     elif call == 4:
+        info = "121.9"
         transmission = f"{plane.callsign}, Tower, exit right when able, contact Ground on {info}."
     elif call == 5:
         transmission = f"{plane.callsign}, Ground, taxi to gate via Taxiway Alpha."
     elif call == 6:
         transmission = f"{plane.callsign}, Ground, pushback and start approved."
     elif call == 7:
-        transmission = f"{plane.callsign}, Ground, taxi to and hold short of the runway via Taxiway Bravo."
+        transmission = f"{plane.callsign}, Ground, taxi to and hold short of the runway via TW Bravo."
     elif call == 8:
-        transmission = f"{plane.callsign}, Tower, line up and wait."
+        info = "118.1"
+        transmission = f"{plane.callsign}, Ground, contact tower on {info}."
     elif call == 9:
-        transmission = f"{plane.callsign}, Tower, cleared for takeoff."
+        transmission = f"{plane.callsign}, Tower, line up and wait."
     elif call == 10:
-        transmission = f"{plane.callsign}, Tower, contact Departure on {info}, good day."
+        transmission = f"{plane.callsign}, Tower, cleared for takeoff."
     elif call == 11:
+        info = "122.6"
+        transmission = f"{plane.callsign}, Tower, contact Departure on {info}, good day."
+    elif call == 12:
         transmission = f"{plane.callsign}, Tower, go around, published missed approach procedure."
 
     plane.atc_history.append([plane.controller, transmission, 1])
     print(transmission)
     if call <= 1:
         plane.game.UI.approach_communications.append([plane.controller, transmission, 1])
-    elif 2 <= call <= 4 or 8 <= call <= 11:
+    elif 2 <= call <= 4 or 9 <= call <= 12:
         plane.game.UI.tower_communications.append([plane.controller, transmission, 1])
-    elif 5 <= call <= 7:
+    elif 5 <= call <= 8:
         plane.game.UI.ground_communications.append([plane.controller, transmission, 1])
 
     plane_answers(call, plane, info)
@@ -126,22 +132,22 @@ def plane_answers(atc_call, plane, info=""):
     if atc_call == 0:
         if plane.state == 0:
             radio = f"Expect ILS approach, {plane.callsign}."  # TODO add runway num
-    elif atc_call == 1:
-        if plane.state == 0 or plane.state == 6:
+            plane.cleared_approach = True
+    elif atc_call == 1 or atc_call == 8:
+        if (plane.state == 0 and plane.cleared_approach) or plane.state == 6:
             radio = f"Contact Tower on {info}, {plane.callsign}."
-            plane.controller = 1
+
     elif atc_call == 2:
-        if plane.state == 1:
+        if (plane.state == 1 or plane.state == 0) and plane.controller == 1:
             radio = f"Cleared to land, {plane.callsign}."
             plane.cleared_to_land = True
     elif atc_call == 3:
-        if 1 <= plane.state <= 2 or plane.state == 6.5:  # TODO unable returned via wrong channel: No respons if wrong channel
+        if (plane.state == 0 and plane.cleared_approach) or 1 <= plane.state <= 2 or plane.state == 6.5:  # TODO unable returned via wrong channel: No respons if wrong channel
             radio = f"Wind {plane.game.airport.wind}, {plane.callsign}."
             plane.wind_given = True
     elif atc_call == 4:
         if plane.state == 3:
-            radio = f"Contact ground on {info}, {plane.callsign}."
-            plane.controller = 2
+            radio = f"Contact Ground on {info}, {plane.callsign}."
     elif atc_call == 5:
         if plane.state == 3:
             radio = f"Taxi to gate via Taxiway Alpha, {plane.callsign}."
@@ -152,24 +158,27 @@ def plane_answers(atc_call, plane, info=""):
             plane.pushback_and_start_approved = True
     elif atc_call == 7:
         if plane.state == 5:
-            radio = f"Taxi to and hold short of the runway via Bravo,\ncontact Tower on {info}, {plane.callsign}."
+            radio = f"Taxi to and hold short of the runway via Bravo, {plane.callsign}."
             plane.cleared_to_runway = True
-    elif atc_call == 8:
+    elif atc_call == 9:
         if plane.state == 6 and plane.controller == 1:
             radio = f"Line up and wait, {plane.callsign}."
             plane.cleared_to_lineup = True
-    elif atc_call == 9:
+    elif atc_call == 10:
         if (plane.state == 6.5 or (plane.state == 6 and plane.progress > 95)) and plane.controller == 1:
             radio = f"Cleared for takeoff, {plane.callsign}."
             plane.cleared_to_start = True
-    elif atc_call == 10:
-        if plane.state == 7:
+    elif atc_call == 11:
+        if plane.state == 7 and plane.progress > 55:
             radio = f"Contact Departure on {info}, good day, {plane.callsign}."
             plane.departure_frequency = True
-    elif atc_call == 11:
+    elif atc_call == 12:
         if plane.state == 1 or plane.state == 2:
             radio = f"Go around, published missed approach procedure, {plane.callsign}."
             plane.change_state(11)
+
+    if "Unable" in radio:
+        plane.pilot_stress_level += 1
 
     plane.atc_history.append([plane.controller, radio, 0])
     print(radio)
@@ -179,3 +188,8 @@ def plane_answers(atc_call, plane, info=""):
         plane.game.UI.tower_communications.append([plane.controller, radio, 0])
     elif plane.controller == 2:
         plane.game.UI.ground_communications.append([plane.controller, radio, 0])
+
+    if "Contact Tower" in radio:
+        plane.controller = 1
+    elif "Contact Ground" in radio:
+        plane.controller = 2

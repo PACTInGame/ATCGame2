@@ -10,6 +10,7 @@ class Plane:
         self.fuel = fuel
         self.state = state
         self.game = game
+        self.cleared_approach = False
         self.cleared_to_land = False
         self.cleared_to_gate = False
         self.wind_given = False
@@ -137,12 +138,13 @@ class Plane:
                 self.game.airport.planes_at_airport.remove(self)
 
         elif self.state == 8:  # In Air
-            self.progress += self.speed / 220.0
+            self.progress += 4
 
             if self.progress > 100:
                 if self.pilot_stress_level > 5:
-                    self.score -= 2
-
+                    self.score -= self.pilot_stress_level
+                if self.score < 0:
+                    self.score = 0
                 self.game.score += self.score
 
                 self.game.airport.airspace.planes_in_airspace.remove(self)
