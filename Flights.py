@@ -43,7 +43,7 @@ def get_random_flight(game):
     planes = game.airport.airspace.planes_in_airspace + game.airport.planes_at_airport + game.airport.airspace.planes_about_to_enter_airspace
     random_flight = random.choice(list(flights.keys()))
 
-    while random_flight[0] in [plane.callsign for plane in planes]:
+    while flights[random_flight][0] in [plane.callsign for plane in planes]:
         random_flight = random.choice(list(flights.keys()))
     return flights[random_flight]
 
