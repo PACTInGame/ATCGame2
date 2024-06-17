@@ -19,6 +19,7 @@ class GameUI:
         self.plane_buttons = []
         self.state = 'menu'
         self.font = pygame.font.SysFont('Roboto', 25)  # font for notifications
+        self.background = pygame.image.load('assets/Background.png')
 
         self.approach_communications = []
         self.tower_communications = []
@@ -82,7 +83,6 @@ class GameUI:
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mouse_pos = event.pos
                 if self.close_button.is_over(mouse_pos):
-
                     self.quit_game()
 
                 if self.state == 'menu':
@@ -106,7 +106,6 @@ class GameUI:
                 elif self.state == 'radio':
                     for button in self.buttons[self.state]:
                         if button.is_over(mouse_pos):
-
                             self.game_instance.handle_radio_selection(button.text)
 
                 elif self.state == 'plane':
@@ -146,7 +145,7 @@ class GameUI:
         for i, text in enumerate(self.ground_communications):
             color = colors['ORANGE'] if text[2] == 1 else colors['WHITE']
             text_surface = self.font.render(text[1], True, color)
-            self.screen.blit(text_surface, (self.WIDTH - 1650 , self.HEIGHT - 20 - i * 30))
+            self.screen.blit(text_surface, (self.WIDTH - 1650, self.HEIGHT - 20 - i * 30))
 
     def draw_buttons(self):
         for button in self.buttons[self.state]:
@@ -156,11 +155,25 @@ class GameUI:
                 button.draw(self.screen)
         self.close_button.draw(self.screen)
 
+    def draw_background(self):
+        self.screen.blit(self.background, (0, 0))
+
+    def draw_planes(self):
+        planes = self.game_instance.airport.airspace.planes_about_to_enter_airspace + self.game_instance.airport.airspace.planes_in_airspace + self.game_instance.airport.planes_at_airport
+        for plane in planes:
+            if plane.state > 0:
+                plane.draw(self.screen)
+
     def run(self):
         while True:
             self.handle_events()
-            self.screen.fill((0, 0, 0))
+            if self.state != 'menu':
+                self.draw_background()
+            else:
+                self.screen.fill((0, 0, 0))
+            self.draw_planes()
             self.draw_buttons()
+
             if self.state == 'play' or self.state == 'plane' or self.state == 'radio':
                 self.draw_texts()
             pygame.display.flip()

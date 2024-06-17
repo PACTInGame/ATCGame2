@@ -1,11 +1,17 @@
 import random
 
+import pygame
+
 
 class Plane:
     def __init__(self, plane_type, pax, fuel, state, game, callsign="N/A"):
         self.callsign = callsign[0]
         self.from_airport = callsign[1]
         self.plane_type = plane_type
+        if self.plane_type in [5,7,8,9,10,11]:
+            self.texture = pygame.image.load("assets/large_plane.png")
+        else:
+            self.texture = pygame.image.load("assets/medium_plane.png")
         self.pax = pax
         self.fuel = fuel
         self.state = state
@@ -47,15 +53,16 @@ class Plane:
         self.progress = 0.0
 
     def update_progress(self):
+        # print("\n")
+        # print("Plane type:", self.plane_type, "state:", self.state, "progress:", self.progress)
+        # print("Cleared_to_land:", self.cleared_to_land, "Cleared_to_gate:", self.cleared_to_gate, "Wind_given:", self.wind_given)
+        print("Plane speed:", self.speed, "Cleared speed:", self.cleared_speed)
         print("\n")
-        print("Plane type:", self.plane_type, "state:", self.state, "progress:", self.progress)
-        print("Cleared_to_land:", self.cleared_to_land, "Cleared_to_gate:", self.cleared_to_gate, "Wind_given:", self.wind_given)
-        print("\n")
-        if self.speed > self.cleared_speed + 5 or self.speed < self.cleared_speed - 5:
+        if self.speed > self.cleared_speed - 1 or self.speed < self.cleared_speed - 6:
             if self.speed < self.cleared_speed:
-                self.speed += (self.cleared_speed / self.speed) * 2
+                self.speed += (self.speed / self.cleared_speed) * 2
             else:
-                self.speed -= (self.cleared_speed / self.speed) * 2
+                self.speed -= (self.speed / self.cleared_speed) * 2
 
         if self.altitude != self.cleared_altitude:
             if self.altitude < self.cleared_altitude:
@@ -148,3 +155,22 @@ class Plane:
                 self.game.score += self.score
 
                 self.game.airport.airspace.planes_in_airspace.remove(self)
+
+
+    def draw(self, screen):
+        x = 1800
+        y = 400
+        if self.state == 0:
+            pass
+
+        elif self.state == 1:
+            x = 1920 - self.progress * 5
+            y = 410
+
+        elif self.state == 2:
+            x = 1420 - self.progress * 2.5
+            y = 410
+        print(x,y)
+        print(self.progress)
+        screen.blit(self.texture, (x, y))
+
