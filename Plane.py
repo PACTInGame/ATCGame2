@@ -141,8 +141,8 @@ class Plane:
             self.progress += 4
 
             if self.progress > 100:
-                if self.pilot_stress_level > 5:
-                    self.score -= self.pilot_stress_level
+
+                self.score -= self.pilot_stress_level
                 if self.score < 0:
                     self.score = 0
                 self.game.score += self.score

@@ -18,7 +18,7 @@ class GameController:
         self.airport = Airport.Airport("Airport", [], Runway.Runway("32", "14", 0, 0, 0, 0),
                                        Airspace.Airspace(20))  # TODO Edit x,y
 
-        self.spawn_rate_planes = 60
+        self.spawn_rate_planes = 200
         self.time_plane_spawned = time.perf_counter()
 
         self.game_start_time = time.time()
