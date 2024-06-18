@@ -19,7 +19,9 @@ class GameUI:
         self.plane_buttons = []
         self.state = 'menu'
         self.font = pygame.font.SysFont('Roboto', 25)  # font for notifications
+        self.font_small = pygame.font.SysFont('Roboto', 15)  # font for notifications
         self.background = pygame.image.load('assets/Background.png')
+        self.airport = pygame.image.load('assets/Airport.png')
 
         self.approach_communications = []
         self.tower_communications = []
@@ -158,10 +160,19 @@ class GameUI:
     def draw_background(self):
         self.screen.blit(self.background, (0, 0))
 
-    def draw_planes(self):
+    def draw_planes_airspace(self):
         planes = self.game_instance.airport.airspace.planes_about_to_enter_airspace + self.game_instance.airport.airspace.planes_in_airspace + self.game_instance.airport.planes_at_airport
         for plane in planes:
-            if plane.state > 0:
+            if plane.state in [1, 2, 8]:
+                plane.draw(self.screen)
+
+    def draw_airport(self):
+        self.screen.blit(self.airport, (78, 180))
+
+    def draw_planes_airport(self):
+        planes = self.game_instance.airport.airspace.planes_about_to_enter_airspace + self.game_instance.airport.airspace.planes_in_airspace + self.game_instance.airport.planes_at_airport
+        for plane in planes:
+            if 3 <= plane.state <= 7:
                 plane.draw(self.screen)
 
     def run(self):
@@ -169,13 +180,17 @@ class GameUI:
             self.handle_events()
             if self.state != 'menu':
                 self.draw_background()
+                self.draw_planes_airspace()
+                self.draw_airport()
+                self.draw_planes_airport()
             else:
                 self.screen.fill((0, 0, 0))
-            self.draw_planes()
+
             self.draw_buttons()
 
             if self.state == 'play' or self.state == 'plane' or self.state == 'radio':
                 self.draw_texts()
+
             pygame.display.flip()
             self.clock.tick(60)
 

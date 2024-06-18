@@ -18,7 +18,7 @@ class GameController:
         self.airport = Airport.Airport("Airport", [], Runway.Runway("32", "14", 0, 0, 0, 0),
                                        Airspace.Airspace(20))  # TODO Edit x,y
 
-        self.spawn_rate_planes = 300
+        self.spawn_rate_planes = 350
         self.time_plane_spawned = time.perf_counter()
 
         self.game_start_time = time.time()
@@ -30,7 +30,8 @@ class GameController:
         self.UI = UI
         self.running = True
         self.selected_plane = None
-
+    # ROUND SPEED
+    # FLUCTUATE SPEED AND HEIGHT
     def start_game(self):
         self.state = 1
         self.playing_start_time = time.time()

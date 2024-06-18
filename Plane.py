@@ -8,10 +8,14 @@ class Plane:
         self.callsign = callsign[0]
         self.from_airport = callsign[1]
         self.plane_type = plane_type
-        if self.plane_type in [5,7,8,9,10,11]:
+        if self.plane_type in [5, 7, 8, 9, 10, 11]:
             self.texture = pygame.image.load("assets/large_plane.png")
+            self.transform_x = 48
+            self.transform_y = 58
         else:
             self.texture = pygame.image.load("assets/medium_plane.png")
+            self.transform_x = 35
+            self.transform_y = 42
         self.pax = pax
         self.fuel = fuel
         self.state = state
@@ -52,6 +56,14 @@ class Plane:
         self.state = new_state
         self.progress = 0.0
 
+    def calculate_height_loss_s_1(self):
+        final_height = 2000  # height in ft at 100% progress
+        self.altitude = self.cleared_altitude - (self.cleared_altitude - final_height) * ((self.progress - 50) / 50)
+
+    def calculate_height_loss_s_2(self):
+        final_height = 100  # height in ft at 100% progress
+        self.altitude = 2000 - (2000 - final_height) * (self.progress / 100)
+
     def update_progress(self):
         # print("\n")
         # print("Plane type:", self.plane_type, "state:", self.state, "progress:", self.progress)
@@ -60,15 +72,15 @@ class Plane:
         print("\n")
         if self.speed > self.cleared_speed - 1 or self.speed < self.cleared_speed - 6:
             if self.speed < self.cleared_speed:
-                self.speed += (self.speed / self.cleared_speed) * 2
+                self.speed += (self.speed / self.cleared_speed)
             else:
-                self.speed -= (self.speed / self.cleared_speed) * 2
+                self.speed -= (self.speed / self.cleared_speed)
 
-        if self.altitude != self.cleared_altitude:
-            if self.altitude < self.cleared_altitude:
-                self.altitude += self.rate
-            else:
-                self.altitude -= self.rate
+        # if self.altitude != self.cleared_altitude:
+        #     if self.altitude < self.cleared_altitude:
+        #         self.altitude += self.rate
+        #     else:
+        #         self.altitude -= self.rate
 
         if self.state == 0:  # About to enter airspace (Automatically switch to Approach)
             self.progress += 2
@@ -80,6 +92,9 @@ class Plane:
 
         elif self.state == 1:  # Approach (manual switch to Landing)
             self.progress += self.speed / 220.0
+            if self.progress > 50:
+                self.calculate_height_loss_s_1()
+
             if self.controller == 0 and self.progress > 50:
                 self.change_state(10)
 
@@ -94,6 +109,7 @@ class Plane:
         elif self.state == 2:  # Landing (Automatically switch to Touhdown+Runway)
             self.cleared_speed = 135.0
             self.progress += self.speed / 125.0
+            self.calculate_height_loss_s_2()
             if self.progress > 60 and not self.wind_given:
                 self.change_state(10)
             if self.progress > 100:
@@ -103,7 +119,7 @@ class Plane:
                 self.wind_given = False
 
         elif self.state == 3:  # Touchdown+Runway (manual switch to Taxiing to Gate)
-            self.progress += self.speed / 20.0
+            self.progress += self.speed / 50.0
             self.cleared_speed = 20.0
             if self.cleared_to_gate and self.progress > 100:
                 self.change_state(4)
@@ -138,15 +154,17 @@ class Plane:
         elif self.state == 7:  # Taking off (automatically switch to In Air)
             self.cleared_speed = 250.0
             self.progress += self.speed / 100.0
+
             # TODO: Add more conditions for taking off, like wind
             if self.progress > 100 and self.departure_frequency:
                 self.change_state(8)
+                self.altitude = 500
                 self.game.airport.airspace.planes_in_airspace.append(self)
                 self.game.airport.planes_at_airport.remove(self)
 
         elif self.state == 8:  # In Air
             self.progress += 4
-
+            self.altitude += 42
             if self.progress > 100:
 
                 self.score -= self.pilot_stress_level
@@ -156,10 +174,11 @@ class Plane:
 
                 self.game.airport.airspace.planes_in_airspace.remove(self)
 
-
     def draw(self, screen):
         x = 1800
         y = 400
+        screen_texture = self.texture
+
         if self.state == 0:
             pass
 
@@ -168,9 +187,74 @@ class Plane:
             y = 410
 
         elif self.state == 2:
-            x = 1420 - self.progress * 2.5
-            y = 410
-        print(x,y)
-        print(self.progress)
-        screen.blit(self.texture, (x, y))
 
+            x = 1420 - self.progress * 3.6
+            y = 410
+        elif self.state == 3:
+            y = 405
+            if self.progress <= 50:
+                x = 1100 - self.progress * 13
+            else:
+                x = 1100 - 650
+
+        elif self.state == 4:
+            x = 500
+            y = 400
+        elif self.state == 7:
+            y = 405
+            if self.progress >= 10:
+                x = 750 - self.progress * 9
+            else:
+                x = 750
+        elif self.state == 8:
+            y = 400
+            x = 90 - self.progress * 4
+        print(self.progress)
+        if self.state in [1, 2]:
+            display_speed = round(self.speed + random.randint(-5, 5))
+            display_altitude = round(self.altitude + random.randint(-20, 20))
+            screen_texture = pygame.transform.scale(self.texture, (self.transform_x, self.transform_y))
+            plane_callsign_text = self.game.UI.font_small.render(f"{self.callsign}", True, (255, 255, 255))
+            plane_height_text = self.game.UI.font_small.render(f"{display_altitude} ft @ {round(display_speed)} kts", True,
+                                                               (255, 255, 255))
+            screen.blit(plane_callsign_text,
+                        (x - plane_callsign_text.get_width() / 2 + self.transform_x / 2, y + self.transform_y + 5))
+            screen.blit(plane_height_text,
+                        (x - plane_height_text.get_width() / 2 + self.transform_x / 2, y + self.transform_y + 20))
+            screen.blit(screen_texture, (x, y))
+        elif self.state == 8:
+            clip_rect = pygame.Rect(0, 0, 77, 580)
+            # Get the current texture and calculate its destination rectangle
+            screen_texture = pygame.transform.scale(self.texture, (self.transform_x, self.transform_y))
+            image_rect = screen_texture.get_rect(topleft=(x, y))
+
+            # Calculate the visible part of the image within the clipping rectangle
+            visible_rect = clip_rect.clip(image_rect)
+            if visible_rect.width > 0 and visible_rect.height > 0:
+                source_rect = pygame.Rect(
+                    visible_rect.x - x,
+                    visible_rect.y - y,
+                    visible_rect.width,
+                    visible_rect.height
+                )
+
+                # Blit the part of the image that is within the clipping rectangle
+                screen.blit(screen_texture, visible_rect.topleft, source_rect)
+        else:
+            clip_rect = pygame.Rect(88, 193, 1001, 382)
+            # Get the current texture and calculate its destination rectangle
+            screen_texture = self.texture
+            image_rect = screen_texture.get_rect(topleft=(x, y))
+
+            # Calculate the visible part of the image within the clipping rectangle
+            visible_rect = clip_rect.clip(image_rect)
+            if visible_rect.width > 0 and visible_rect.height > 0:
+                source_rect = pygame.Rect(
+                    visible_rect.x - x,
+                    visible_rect.y - y,
+                    visible_rect.width,
+                    visible_rect.height
+                )
+
+                # Blit the part of the image that is within the clipping rectangle
+                screen.blit(screen_texture, visible_rect.topleft, source_rect)
