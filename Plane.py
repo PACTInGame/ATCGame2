@@ -48,6 +48,8 @@ class Plane:
         self.cleared_altitude = random_height if self.state == 0 else 0
         self.rate = 52.3  # Standard descent/ascend rate, can be expedited
 
+        self.speed_fluctuation = 0
+        self.altitude_fluctuation = 0
         self.heading = 0
 
         self.pilot_stress_level = 0
@@ -64,7 +66,25 @@ class Plane:
         final_height = 100  # height in ft at 100% progress
         self.altitude = 2000 - (2000 - final_height) * (self.progress / 100)
 
+    def get_waypoints(self):
+        # TODO ADD WAYPOINTS FOR DIFFERENT GATES
+        gate = 1
+        if gate == 1:
+            waypoints = [
+                (450, 445, 0),
+                (402, 418, 90),
+                (402, 380, 90),
+                (448, 345, 180),
+                (569, 345, 180),
+                (691, 345, 180),
+                (780, 272, 90)
+            ]
+
+        return waypoints
+
     def update_progress(self):
+        self.speed_fluctuation = random.randint(-2, 2)
+        self.altitude_fluctuation = random.randint(-8, 8)
         # print("\n")
         # print("Plane type:", self.plane_type, "state:", self.state, "progress:", self.progress)
         # print("Cleared_to_land:", self.cleared_to_land, "Cleared_to_gate:", self.cleared_to_gate, "Wind_given:", self.wind_given)
@@ -121,7 +141,7 @@ class Plane:
         elif self.state == 3:  # Touchdown+Runway (manual switch to Taxiing to Gate)
             self.progress += self.speed / 50.0
             self.cleared_speed = 20.0
-            if self.cleared_to_gate and self.progress > 100:
+            if self.cleared_to_gate and self.progress > 51:
                 self.change_state(4)
 
         elif self.state == 4:  # Taxiing to Gate (automatically switch to At Gate)
@@ -174,10 +194,22 @@ class Plane:
 
                 self.game.airport.airspace.planes_in_airspace.remove(self)
 
+    def interpolate(self, p1, p2, t):
+        x1, y1, angle1 = p1
+        x2, y2, angle2 = p2
+        x = x1 + (x2 - x1) * t
+        y = y1 + (y2 - y1) * t
+        angle = angle1 + (angle2 - angle1) * t
+        return (x, y, angle)
+
+    def rotate_image(self, image, angle):
+        return pygame.transform.rotate(image, -angle)
+
     def draw(self, screen):
         x = 1800
         y = 400
         screen_texture = self.texture
+        angle = 0
 
         if self.state == 0:
             pass
@@ -191,15 +223,29 @@ class Plane:
             x = 1420 - self.progress * 3.6
             y = 410
         elif self.state == 3:
-            y = 405
+            y = 445
             if self.progress <= 50:
                 x = 1100 - self.progress * 13
             else:
                 x = 1100 - 650
 
         elif self.state == 4:
-            x = 500
-            y = 400
+            waypoints = self.get_waypoints()
+            # Determine the current and next waypoints based on progress
+            num_segments = len(waypoints) - 1
+            total_progress = (self.progress / 100) * num_segments  # Scale progress to number of segments
+            segment_index = int(total_progress)  # Get the current segment index
+            segment_t = total_progress - segment_index  # Get the progress within the current segment
+
+            if segment_index >= num_segments:
+                segment_index = num_segments - 1
+                segment_t = 1.0
+
+            start_point = waypoints[segment_index]
+            end_point = waypoints[segment_index + 1]
+
+            x, y, angle = self.interpolate(start_point, end_point, segment_t)
+
         elif self.state == 7:
             y = 405
             if self.progress >= 10:
@@ -210,18 +256,30 @@ class Plane:
             y = 400
             x = 90 - self.progress * 4
         print(self.progress)
+
         if self.state in [1, 2]:
-            display_speed = round(self.speed + random.randint(-5, 5))
-            display_altitude = round(self.altitude + random.randint(-20, 20))
+            display_speed = round(self.speed + self.speed_fluctuation)
+            display_altitude = round(self.altitude + self.altitude_fluctuation)
             screen_texture = pygame.transform.scale(self.texture, (self.transform_x, self.transform_y))
             plane_callsign_text = self.game.UI.font_small.render(f"{self.callsign}", True, (255, 255, 255))
-            plane_height_text = self.game.UI.font_small.render(f"{display_altitude} ft @ {round(display_speed)} kts", True,
+            plane_height_text = self.game.UI.font_small.render(f"{display_altitude} ft @ {round(display_speed)} kts",
+                                                               True,
                                                                (255, 255, 255))
             screen.blit(plane_callsign_text,
                         (x - plane_callsign_text.get_width() / 2 + self.transform_x / 2, y + self.transform_y + 5))
             screen.blit(plane_height_text,
                         (x - plane_height_text.get_width() / 2 + self.transform_x / 2, y + self.transform_y + 20))
             screen.blit(screen_texture, (x, y))
+        elif self.state == 4:
+            # Rotate the image
+            screen_texture = self.rotate_image(screen_texture, angle)
+
+            # Calculate the top-left corner of the image to center it on (x, y)
+            image_x = x - screen_texture.get_width() / 2
+            image_y = y - screen_texture.get_height() / 2
+
+            # Blit (draw) the image on the screen at the calculated position
+            screen.blit(screen_texture, (image_x, image_y))
         elif self.state == 8:
             clip_rect = pygame.Rect(0, 0, 77, 580)
             # Get the current texture and calculate its destination rectangle
@@ -242,19 +300,22 @@ class Plane:
                 screen.blit(screen_texture, visible_rect.topleft, source_rect)
         else:
             clip_rect = pygame.Rect(88, 193, 1001, 382)
-            # Get the current texture and calculate its destination rectangle
+
+            # Get the current texture and calculate its destination rectangle with the center at (x, y)
             screen_texture = self.texture
-            image_rect = screen_texture.get_rect(topleft=(x, y))
+            image_rect = screen_texture.get_rect(center=(x, y))
 
             # Calculate the visible part of the image within the clipping rectangle
             visible_rect = clip_rect.clip(image_rect)
             if visible_rect.width > 0 and visible_rect.height > 0:
                 source_rect = pygame.Rect(
-                    visible_rect.x - x,
-                    visible_rect.y - y,
+                    visible_rect.x - image_rect.x,
+                    visible_rect.y - image_rect.y,
                     visible_rect.width,
                     visible_rect.height
                 )
 
                 # Blit the part of the image that is within the clipping rectangle
                 screen.blit(screen_texture, visible_rect.topleft, source_rect)
+
+    # TODO display callsign in other states

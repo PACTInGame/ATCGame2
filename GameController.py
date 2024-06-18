@@ -30,8 +30,7 @@ class GameController:
         self.UI = UI
         self.running = True
         self.selected_plane = None
-    # ROUND SPEED
-    # FLUCTUATE SPEED AND HEIGHT
+
     def start_game(self):
         self.state = 1
         self.playing_start_time = time.time()
@@ -43,7 +42,9 @@ class GameController:
         self.airport.add_gate(Gate("A1", 0, 1, 0))  # TODO Edit x,y
         self.airport.add_gate(Gate("A2", 1, 1, 0))
         self.airport.add_gate(Gate("A3", 2, 1, 0))
-        self.airport.add_gate(Gate("A4", 3, 1, 0))
+        self.airport.add_gate(Gate("A4", 2, 1, 0))
+        self.airport.add_gate(Gate("A5", 2, 1, 0))
+
         plane = self.create_airplane(0)
         self.airport.airspace.planes_about_to_enter_airspace.append(plane)
 
@@ -92,7 +93,7 @@ class GameController:
     def handle_radio_selection(self, radio_name):
         radio_selection = radio_name.split(":")[0]
         print("Selected Radio Transmission: ", radio_selection)
-        GameLogic.atc_calls(int(radio_selection)-1, self.selected_plane, self)
+        GameLogic.atc_calls(int(radio_selection) - 1, self.selected_plane, self)
         self.UI.state = 'play'
         # TODO handle radios with Info parameters
 
